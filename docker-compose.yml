@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: docuflow-postgres
+    environment:
+      POSTGRES_USER: docuflow
+      POSTGRES_PASSWORD: docuflow_password
+      POSTGRES_DB: docuflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
