@@ -12,7 +12,8 @@ from app.services.notification_services import create_notification
 
 
 from app.database.database import engine
-
+from app.api import documents
+from app.api import categories
 from app.api.auth import router as auth_router
 from app.api.documents import router as documents_router
 
@@ -23,6 +24,7 @@ app = FastAPI(
 
 app.include_router(auth_router)
 app.include_router(documents_router)
+app.include_router(categories.router)
 class EmailTestRequest(BaseModel):
     email: str
 

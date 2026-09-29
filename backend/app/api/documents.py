@@ -16,7 +16,7 @@ from app.models.workflow_action import WorkflowAction
 from datetime import datetime
 from typing import Optional
 from app.models import document
-
+from app.models.category import Category
 
 router = APIRouter(
     prefix="/documents",
@@ -459,4 +459,110 @@ def search_documents(
         "results": documents,
         "limit": limit,
         "page": page,
+    }
+
+@router.put("/{document_id}/category")
+def assign_document_category(
+    document_id: int,
+    category_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    document = db.scalar(
+        select(Document).where(
+            Document.id == document_id
+        )
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found",
+        )
+
+    category = db.scalar(
+        select(Category).where(
+            Category.id == category_id
+        )
+    )
+
+    if category is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found",
+        )
+
+    if current_user.role.name == "EMPLOYEE":
+        if document.uploaded_by != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to modify this document",
+            )
+
+    document.category_id = category_id
+
+    db.commit()
+    db.refresh(document)
+
+    return {
+        "message": "Document category updated successfully",
+        "document_id": document.id,
+        "category_id": document.category_id,
+        "category_name": category.name,
+    }
+
+@router.get("/{document_id}/metadata")
+def get_document_metadata(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    document = db.scalar(
+        select(Document).where(
+            Document.id == document_id
+        )
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found",
+        )
+
+    if current_user.role.name == "EMPLOYEE":
+        if document.uploaded_by != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to access this document",
+            )
+
+    category_name = None
+
+    if document.category_id is not None:
+        category = db.scalar(
+            select(Category).where(
+                Category.id == document.category_id
+            )
+        )
+
+        if category:
+            category_name = category.name
+
+    return {
+        "document_id": document.id,
+        "title": document.title,
+        "file_name": document.file_name,
+        "file_type": document.file_type,
+        "file_size": document.file_size,
+        "file_path": document.file_path,
+        "category_id": document.category_id,
+        "category_name": category_name,
+        "status": document.status,
+        "version": document.version,
+        "uploaded_by": document.uploaded_by,
+        "reviewed_by": document.reviewed_by,
+        "reviewed_at": document.reviewed_at,
+        "rejection_reason": document.rejection_reason,
+        "created_at": document.created_at,
+        "updated_at": document.updated_at,
     }
